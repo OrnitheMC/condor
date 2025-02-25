@@ -3,6 +3,7 @@ package net.ornithemc.condor;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.MethodNode;
@@ -45,13 +46,17 @@ public class LocalVariableNamer {
 			String desc = localVariable.desc;
 			Type type = Type.getType(desc);
 
-			String name = this.generateName(type);
+			if (localVariable.index == 0 && (method.access & Opcodes.ACC_STATIC) == 0) {
+				localVariable.name = "this";
+			} else {
+				String name = this.generateName(type);
 
-			if (!this.names.add(name)) {
-				this.duplicates.add(name);
+				if (!this.names.add(name)) {
+					this.duplicates.add(name);
+				}
+
+				localVariable.name = name;
 			}
-
-			localVariable.name = name;
 		}
 		// then fix up duplicate names
 		for (int i = 0; i < this.method.localVariables.size(); i++) {
