@@ -19,7 +19,7 @@ import net.ornithemc.condor.representation.Classpath;
 
 public class LocalVariableTables {
 
-	public static List<LocalVariableNode> generate(Classpath classpath, ClassNode classNode, MethodNode method) {
+	public static void generate(Classpath classpath, ClassNode classNode, MethodNode method) {
 		List<Type> interfaces = null;
 		if (classNode.interfaces != null) {
 			interfaces = new ArrayList<Type>();
@@ -48,8 +48,7 @@ public class LocalVariableTables {
 		// Record the original size of hte method
 		int methodSize = method.instructions.size();
 
-		// List of LocalVariableNodes to return
-		List<LocalVariableNode> localVariables = new ArrayList<LocalVariableNode>();
+		method.localVariables = new ArrayList<LocalVariableNode>();
 
 		LocalVariableNode[] localNodes = new LocalVariableNode[method.maxLocals]; // LocalVariableNodes for current frame
 		BasicValue[] locals = new BasicValue[method.maxLocals]; // locals in previous frame, used to work out what changes between frames
@@ -87,12 +86,12 @@ public class LocalVariableTables {
 				}
 				
 				if (local == null && locals[j] != null) {
-					localVariables.add(localNodes[j]);
+					method.localVariables.add(localNodes[j]);
 					localNodes[j].end = label;
 					localNodes[j] = null;
 				} else if (local != null) {
 					if (locals[j] != null) {
-						localVariables.add(localNodes[j]);
+						method.localVariables.add(localNodes[j]);
 						localNodes[j].end = label;
 						localNodes[j] = null;
 					}
@@ -124,21 +123,21 @@ public class LocalVariableTables {
 				}
 
 				localNodes[k].end = label;
-				localVariables.add(localNodes[k]);
+				method.localVariables.add(localNodes[k]);
 			}
 		}
 
 		// Sort local variables
-		if (localVariables.size() > 1) {
+		if (method.localVariables.size() > 1) {
 			List<LocalVariableNode> sortedLocalVariables = new ArrayList<>();
-			for (LocalVariableNode localVariable : localVariables) {
+			for (LocalVariableNode localVariable : method.localVariables) {
 				int i = 0;
 				while (i < sortedLocalVariables.size() && localVariable.index >= sortedLocalVariables.get(i).index) {
 					i++;
 				}
 				sortedLocalVariables.add(i, localVariable);
 			}
-			localVariables = sortedLocalVariables;
+			method.localVariables = sortedLocalVariables;
 		}
 
 		// Insert generated labels into the method body
@@ -147,8 +146,6 @@ public class LocalVariableTables {
 				method.instructions.insert(method.instructions.get(n), labels[n]);
 			}
 		}
-
-		return localVariables;
 	}
 
 	public static boolean isComplete(MethodNode method) {
