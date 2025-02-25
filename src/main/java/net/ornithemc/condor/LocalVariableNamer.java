@@ -106,7 +106,7 @@ public class LocalVariableNamer {
 		}
 
 		// skip to first char after inner name separator
-		int j = i++;
+		int j = ++i;
 
 		// class could be local, skip number prefix
 		while (j < className.length() && Character.isDigit(className.charAt(j))) {
