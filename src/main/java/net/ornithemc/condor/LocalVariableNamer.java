@@ -45,7 +45,7 @@ public class LocalVariableNamer {
 			String desc = localVariable.desc;
 			Type type = Type.getType(desc);
 
-			String name = this.getName(type);
+			String name = this.generateName(type);
 
 			if (!this.names.add(name)) {
 				this.duplicates.add(name);
@@ -63,11 +63,11 @@ public class LocalVariableNamer {
 		}
 	}
 
-	public String getName(Type type) {
-		return this.getName(type, false);
+	private String generateName(Type type) {
+		return this.generateName(type, false);
 	}
 
-	public String getName(Type type, boolean array) {
+	private String generateName(Type type, boolean array) {
 		switch (type.getSort()) {
 		case Type.BOOLEAN:
 			return "bl";
@@ -86,7 +86,7 @@ public class LocalVariableNamer {
 		case Type.DOUBLE:
 			return this.doubleName.increment(array);
 		case Type.ARRAY:
-			return this.getName(type.getElementType(), true) + "s";
+			return this.generateName(type.getElementType(), true) + "s";
 		case Type.OBJECT:
 			// find simple name of this object type
 			String simpleName = this.getSimpleName(type.getInternalName());
