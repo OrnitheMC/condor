@@ -32,8 +32,7 @@ public class Condor {
 				ClassNode node = cls.getNode();
 
 				for (MethodNode mtd : node.methods) {
-					// do not generate an lvt if the method already has one
-					if (mtd.localVariables != null && !mtd.localVariables.isEmpty()) {
+					if (LocalVariableTables.isComplete(mtd)) {
 						continue;
 					}
 

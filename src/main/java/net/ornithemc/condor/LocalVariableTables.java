@@ -3,6 +3,7 @@ package net.ornithemc.condor;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
@@ -148,5 +149,41 @@ public class LocalVariableTables {
 		}
 
 		return localVariables;
+	}
+
+	public static boolean isComplete(MethodNode method) {
+		if ((method.access & Opcodes.ACC_ABSTRACT) != 0) {
+			// abstract methods have no method body, so no lvt
+			return true;
+		}
+		// static methods without parameters and no var instructions
+		if (method.maxLocals == 0) {
+			return true;
+		}
+
+		// if lvt is missing or empty, it's incomplete (given maxLocals > 0)
+		if (method.localVariables == null || method.localVariables.isEmpty()) {
+			return false;
+		}
+		// if lvt size is less than maxLocals, some locals are stripped
+		if (method.localVariables.size() < method.maxLocals) {
+			return false;
+		}
+		// non-static methods should have a 'this' variable at index 0
+		if ((method.access & Opcodes.ACC_STATIC) == 0 && !hasThisVariable(method)) {
+			return false;
+		}
+
+		return true;
+	}
+
+	private static boolean hasThisVariable(MethodNode method) {
+		for (LocalVariableNode localVariable : method.localVariables) {
+			if (localVariable.index == 0) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }
