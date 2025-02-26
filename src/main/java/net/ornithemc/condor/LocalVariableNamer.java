@@ -41,21 +41,49 @@ public class LocalVariableNamer {
 	}
 
 	public void generateNames() {
+		Type methodType = Type.getType(this.method.desc);
+		Type[] methodArgs = methodType.getArgumentTypes();
+
+		boolean isStatic = (this.method.access & Opcodes.ACC_STATIC) != 0;
+
 		// generate names based on the variable types
 		for (LocalVariableNode localVariable : this.method.localVariables) {
-			String desc = localVariable.desc;
-			Type type = Type.getType(desc);
+			String name = null;
 
-			if (localVariable.index == 0 && (method.access & Opcodes.ACC_STATIC) == 0) {
-				localVariable.name = "this";
+			if (!isStatic && localVariable.index == 0) {
+				name = "this";
 			} else {
-				String name = this.generateName(type);
+				int varsSize = localVariable.index;
 
-				if (!this.names.add(name)) {
-					this.duplicates.add(name);
+				// offset the var index to account for the 'this' var in non-static methods
+				if (!isStatic) {
+					varsSize--;
 				}
 
-				localVariable.name = name;
+				for (int j = 0; j < methodArgs.length; j++) {
+					if (varsSize == 0) {
+						if (name == null) {
+							name = this.method.parameters.get(j).name;
+						}
+
+						break;
+					} else {
+						varsSize -= methodArgs[j].getSize();
+					}
+				}
+
+				if (name == null) {
+					String varDesc = localVariable.desc;
+					Type varType = Type.getType(varDesc);
+
+					name = this.generateName(varType);
+				}
+			}
+
+			localVariable.name = name;
+
+			if (!this.names.add(name)) {
+				this.duplicates.add(name);
 			}
 		}
 		// then fix up duplicate names
