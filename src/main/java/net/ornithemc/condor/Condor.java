@@ -37,6 +37,7 @@ public class Condor {
 					}
 
 					LocalVariableTables.generate(classpath, node, mtd);
+					LocalVariableTables.removeInvalidEntries(node, mtd);
 
 					// generate nicer local variable names
 					localVariableNamer.init(mtd);

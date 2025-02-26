@@ -1,6 +1,7 @@
 package net.ornithemc.condor;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.objectweb.asm.Opcodes;
@@ -18,6 +19,42 @@ import org.objectweb.asm.tree.analysis.Frame;
 import net.ornithemc.condor.representation.Classpath;
 
 public class LocalVariableTables {
+
+	public static boolean isComplete(MethodNode method) {
+		// abstract methods have no method body, so no lvt
+		if ((method.access & Opcodes.ACC_ABSTRACT) != 0) {
+			return true;
+		}
+		// static methods without parameters and no var instructions
+		if (method.maxLocals == 0) {
+			return true;
+		}
+
+		// if lvt is missing or empty, it's incomplete (given maxLocals > 0)
+		if (method.localVariables == null || method.localVariables.isEmpty()) {
+			return false;
+		}
+		// if lvt size is less than maxLocals, some locals are stripped
+		if (method.localVariables.size() < method.maxLocals) {
+			return false;
+		}
+		// non-static methods should have a 'this' variable at index 0
+		if ((method.access & Opcodes.ACC_STATIC) == 0 && !hasThisVariable(method)) {
+			return false;
+		}
+
+		return true;
+	}
+
+	private static boolean hasThisVariable(MethodNode method) {
+		for (LocalVariableNode localVariable : method.localVariables) {
+			if (localVariable.index == 0) {
+				return true;
+			}
+		}
+
+		return false;
+	}
 
 	public static void generate(Classpath classpath, ClassNode classNode, MethodNode method) {
 		List<Type> interfaces = null;
@@ -148,39 +185,65 @@ public class LocalVariableTables {
 		}
 	}
 
-	public static boolean isComplete(MethodNode method) {
-		if ((method.access & Opcodes.ACC_ABSTRACT) != 0) {
-			// abstract methods have no method body, so no lvt
-			return true;
-		}
-		// static methods without parameters and no var instructions
-		if (method.maxLocals == 0) {
-			return true;
-		}
-
-		// if lvt is missing or empty, it's incomplete (given maxLocals > 0)
+	public static void removeInvalidEntries(ClassNode cls, MethodNode method) {
 		if (method.localVariables == null || method.localVariables.isEmpty()) {
-			return false;
-		}
-		// if lvt size is less than maxLocals, some locals are stripped
-		if (method.localVariables.size() < method.maxLocals) {
-			return false;
-		}
-		// non-static methods should have a 'this' variable at index 0
-		if ((method.access & Opcodes.ACC_STATIC) == 0 && !hasThisVariable(method)) {
-			return false;
+			return;
 		}
 
-		return true;
-	}
+		// Proguard can do very ugly things.
+		// One optimization in particular drops local variables to lower
+		// indices in the LVT based on when the variable is 'live'.
+		// This is not much of a problem except that Proguard likes to
+		// reuse indices reserved for method parameters (and some horrific
+		// cases even the 'this' variable)
 
-	private static boolean hasThisVariable(MethodNode method) {
-		for (LocalVariableNode localVariable : method.localVariables) {
-			if (localVariable.index == 0) {
-				return true;
+		Type desc = Type.getType(method.desc);
+		Type[] args = desc.getArgumentTypes();
+
+		boolean isStatic = (method.access & Opcodes.ACC_STATIC) != 0;
+		// index 0 is for the 'this' var (not strictly a param but shh)
+		boolean[] paramsFound = new boolean[args.length + 1];
+
+		for (Iterator<LocalVariableNode> it = method.localVariables.iterator(); it.hasNext(); ) {
+			LocalVariableNode localVariable = it.next();
+
+			if (!isStatic && localVariable.index == 0) {
+				// strip entries that reuse the 'this' var index
+				if (paramsFound[0]) {
+					it.remove();
+				}
+
+				paramsFound[0] = true;
+			} else {
+				int varsSize = localVariable.index;
+
+				// offset the var index to account for the 'this' var in non-static methods
+				if (!isStatic) {
+					varsSize--;
+				}
+
+				for (int i = 0; i < args.length; i++) {
+					if (varsSize == 0) {
+						// strip entries that reuse param indices
+						if (paramsFound[i + 1]) {
+							it.remove();
+						} else {
+							paramsFound[i + 1] = true;
+						}
+
+						break;
+					} else {
+						varsSize -= args[i].getSize();
+					}
+				}
+
+				// if parameters contain double or long types (which have size 2)
+				// there are indices that are not used by any LVT entry, but that
+				// can be reused by later entries - remove those as well
+				if (varsSize < 0) {
+					it.remove();
+				}
 			}
 		}
-
-		return false;
 	}
 }
