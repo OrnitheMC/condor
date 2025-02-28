@@ -13,6 +13,9 @@ public class LocalVariableNamer {
 	private Options options;
 	private MethodNode method;
 
+
+	// fields used for name generation
+
 	// current states for primitive types that count up
 	// through chars (as opposed to adding a number suffix)
 	private CharCounter charName = new CharCounter('c');
@@ -42,21 +45,21 @@ public class LocalVariableNamer {
 		this.duplicates.clear();
 	}
 
-	public void run(boolean generateNames) {
+	public void run(boolean improveNames) {
 		Type methodType = Type.getType(this.method.desc);
 		Type[] methodArgs = methodType.getArgumentTypes();
 
 		boolean isStatic = (this.method.access & Opcodes.ACC_STATIC) != 0;
 
-		// generate names based on the variable types
+		// name all local variables
 		for (LocalVariableNode localVariable : this.method.localVariables) {
 			String name = null;
 
 			if (!isStatic && localVariable.index == 0) {
 				name = "this";
 			} else if (this.options.obfuscateNames) {
-				name = "\u2603";
-			} else if (this.options.keepParameterNames && this.method.parameters != null) {
+				name = "\u2603"; // snowman character
+			} else if (improveNames && this.options.keepParameterNames && this.method.parameters != null) {
 				int varsSize = localVariable.index;
 
 				// offset the var index to account for the 'this' var in non-static methods
@@ -66,7 +69,9 @@ public class LocalVariableNamer {
 
 				for (int j = 0; j < methodArgs.length; j++) {
 					if (varsSize == 0) {
+						// this variable is a parameter
 						if (name == null) {
+							// take name from parameter attribute
 							name = this.method.parameters.get(j).name;
 						}
 
@@ -77,8 +82,8 @@ public class LocalVariableNamer {
 				}
 			}
 
-			// if no name picked yet, generate one
-			if (name == null && generateNames) {
+			// if no name picked yet, generate one based on the variable types
+			if (name == null && improveNames) {
 				String varDesc = localVariable.desc;
 				Type varType = Type.getType(varDesc);
 
@@ -93,9 +98,9 @@ public class LocalVariableNamer {
 				}
 			}
 		}
-		// then fix up any duplicate names
-		// only needs to happen if new names are generated based on the variable types
-		if (generateNames && !this.options.obfuscateNames && !this.duplicates.isEmpty()) {
+
+		// if new names are generated based on the variable types, fix up any duplicates
+		if (improveNames && !this.options.obfuscateNames && !this.duplicates.isEmpty()) {
 			for (int i = 0; i < this.method.localVariables.size(); i++) {
 				LocalVariableNode localVariable = this.method.localVariables.get(i);
 
