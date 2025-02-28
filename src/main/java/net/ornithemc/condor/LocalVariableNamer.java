@@ -53,25 +53,29 @@ public class LocalVariableNamer {
 			if (!isStatic && localVariable.index == 0) {
 				name = "this";
 			} else {
-				int varsSize = localVariable.index;
+				// keep existing parameter names
+				if (this.method.parameters != null) {
+					int varsSize = localVariable.index;
 
-				// offset the var index to account for the 'this' var in non-static methods
-				if (!isStatic) {
-					varsSize--;
-				}
+					// offset the var index to account for the 'this' var in non-static methods
+					if (!isStatic) {
+						varsSize--;
+					}
 
-				for (int j = 0; j < methodArgs.length; j++) {
-					if (varsSize == 0) {
-						if (name == null) {
-							name = this.method.parameters.get(j).name;
+					for (int j = 0; j < methodArgs.length; j++) {
+						if (varsSize == 0) {
+							if (name == null) {
+								name = this.method.parameters.get(j).name;
+							}
+
+							break;
+						} else {
+							varsSize -= methodArgs[j].getSize();
 						}
-
-						break;
-					} else {
-						varsSize -= methodArgs[j].getSize();
 					}
 				}
 
+				// if no name chosen yet, generate one
 				if (name == null) {
 					String varDesc = localVariable.desc;
 					Type varType = Type.getType(varDesc);
