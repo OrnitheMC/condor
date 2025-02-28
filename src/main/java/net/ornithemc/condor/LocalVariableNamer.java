@@ -10,6 +10,7 @@ import org.objectweb.asm.tree.MethodNode;
 
 public class LocalVariableNamer {
 
+	private Options options;
 	private MethodNode method;
 
 	// current states for primitive types that count up
@@ -25,7 +26,8 @@ public class LocalVariableNamer {
 	private Set<String> names = new HashSet<>();
 	private Set<String> duplicates = new HashSet<>();
 
-	public void init(MethodNode method) {
+	public void init(Options options, MethodNode method) {
+		this.options = options;
 		this.method = method;
 
 		this.charName.reset();
@@ -40,7 +42,7 @@ public class LocalVariableNamer {
 		this.duplicates.clear();
 	}
 
-	public void generateNames() {
+	public void run(boolean generateNames) {
 		Type methodType = Type.getType(this.method.desc);
 		Type[] methodArgs = methodType.getArgumentTypes();
 
@@ -52,50 +54,52 @@ public class LocalVariableNamer {
 
 			if (!isStatic && localVariable.index == 0) {
 				name = "this";
-			} else {
-				// keep existing parameter names
-				if (this.method.parameters != null) {
-					int varsSize = localVariable.index;
+			} else if (this.options.keepParameterNames && this.method.parameters != null) {
+				int varsSize = localVariable.index;
 
-					// offset the var index to account for the 'this' var in non-static methods
-					if (!isStatic) {
-						varsSize--;
-					}
-
-					for (int j = 0; j < methodArgs.length; j++) {
-						if (varsSize == 0) {
-							if (name == null) {
-								name = this.method.parameters.get(j).name;
-							}
-
-							break;
-						} else {
-							varsSize -= methodArgs[j].getSize();
-						}
-					}
+				// offset the var index to account for the 'this' var in non-static methods
+				if (!isStatic) {
+					varsSize--;
 				}
 
-				// if no name chosen yet, generate one
-				if (name == null) {
-					String varDesc = localVariable.desc;
-					Type varType = Type.getType(varDesc);
+				for (int j = 0; j < methodArgs.length; j++) {
+					if (varsSize == 0) {
+						if (name == null) {
+							name = this.method.parameters.get(j).name;
+						}
 
-					name = this.generateName(varType);
+						break;
+					} else {
+						varsSize -= methodArgs[j].getSize();
+					}
 				}
 			}
 
-			localVariable.name = name;
+			// if no name picked yet, generate one
+			if (name == null && generateNames) {
+				String varDesc = localVariable.desc;
+				Type varType = Type.getType(varDesc);
 
-			if (!this.names.add(name)) {
-				this.duplicates.add(name);
+				name = this.generateName(varType);
+			}
+
+			if (name != null) {
+				localVariable.name = name;
+
+				if (!this.names.add(name)) {
+					this.duplicates.add(name);
+				}
 			}
 		}
-		// then fix up duplicate names
-		for (int i = 0; i < this.method.localVariables.size(); i++) {
-			LocalVariableNode localVariable = this.method.localVariables.get(i);
+		// then fix up any duplicate names
+		// only needs to happen if new names are generated based on the variable types
+		if (generateNames && !this.duplicates.isEmpty()) {
+			for (int i = 0; i < this.method.localVariables.size(); i++) {
+				LocalVariableNode localVariable = this.method.localVariables.get(i);
 
-			if (this.duplicates.contains(localVariable.name)) {
-				localVariable.name += i;
+				if (this.duplicates.contains(localVariable.name)) {
+					localVariable.name += i;
+				}
 			}
 		}
 	}

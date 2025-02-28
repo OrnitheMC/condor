@@ -14,10 +14,10 @@ import net.ornithemc.condor.representation.Classpath;
 public class Condor {
 
 	public static void run(Path jar, Path... libs) throws IOException {
-		run(jar, Arrays.asList(libs));
+		run(jar, Arrays.asList(libs), Options.builder().build());
 	}
 
-	public static void run(Path jar, List<Path> libs) throws IOException {
+	public static void run(Path jar, List<Path> libs, Options options) throws IOException {
 		Classpath classpath = new Classpath(jar, libs);
 
 		try {
@@ -32,19 +32,24 @@ public class Condor {
 				ClassNode node = cls.getNode();
 
 				for (MethodNode mtd : node.methods) {
-					if (LocalVariableTables.isComplete(mtd)) {
-						continue;
+					boolean generateLvt = !LocalVariableTables.isComplete(mtd);
+
+					if (generateLvt) {
+						LocalVariableTables.generate(classpath, node, mtd);
+
+						if (options.removeInvalidEntries) {
+							LocalVariableTables.removeInvalidEntries(node, mtd);
+						}
 					}
 
-					LocalVariableTables.generate(classpath, node, mtd);
-					LocalVariableTables.removeInvalidEntries(node, mtd);
+					// generate local variable names
+					localVariableNamer.init(options, mtd);
+					localVariableNamer.run(generateLvt);
 
-					// generate nicer local variable names
-					localVariableNamer.init(mtd);
-					localVariableNamer.generateNames();
-
-					// mark the class for saving
-					cls.markDirty();
+					if (generateLvt) {
+						// mark the class for saving
+						cls.markDirty();
+					}
 				}
 
 				// and write the class if any of its method has a new lvt
