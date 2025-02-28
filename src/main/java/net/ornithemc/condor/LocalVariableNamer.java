@@ -54,6 +54,8 @@ public class LocalVariableNamer {
 
 			if (!isStatic && localVariable.index == 0) {
 				name = "this";
+			} else if (this.options.obfuscateNames) {
+				name = "\u2603";
 			} else if (this.options.keepParameterNames && this.method.parameters != null) {
 				int varsSize = localVariable.index;
 
@@ -86,14 +88,14 @@ public class LocalVariableNamer {
 			if (name != null) {
 				localVariable.name = name;
 
-				if (!this.names.add(name)) {
+				if (!this.options.obfuscateNames && !this.names.add(name)) {
 					this.duplicates.add(name);
 				}
 			}
 		}
 		// then fix up any duplicate names
 		// only needs to happen if new names are generated based on the variable types
-		if (generateNames && !this.duplicates.isEmpty()) {
+		if (generateNames && !this.options.obfuscateNames && !this.duplicates.isEmpty()) {
 			for (int i = 0; i < this.method.localVariables.size(); i++) {
 				LocalVariableNode localVariable = this.method.localVariables.get(i);
 

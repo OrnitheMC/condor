@@ -4,10 +4,12 @@ public class Options {
 
 	public final boolean removeInvalidEntries;
 	public final boolean keepParameterNames;
+	public final boolean obfuscateNames;
 
-	private Options(boolean removeInvalidEntries, boolean keepParameterNames) {
+	private Options(boolean removeInvalidEntries, boolean keepParameterNames, boolean obfuscateNames) {
 		this.removeInvalidEntries = removeInvalidEntries;
 		this.keepParameterNames = keepParameterNames;
+		this.obfuscateNames = obfuscateNames;
 	}
 
 	public static Builder builder() {
@@ -18,6 +20,7 @@ public class Options {
 
 		private boolean removeInvalidLvtEntries;
 		private boolean keepParameterNames;
+		private boolean obfuscateNames;
 
 		public Builder removeInvalidEntries() {
 			this.removeInvalidLvtEntries = true;
@@ -29,8 +32,13 @@ public class Options {
 			return this;
 		}
 
+		public Builder obfuscateNames() {
+			this.obfuscateNames = true;
+			return this;
+		}
+
 		public Options build() {
-			return new Options(this.removeInvalidLvtEntries, this.keepParameterNames);
+			return new Options(this.removeInvalidLvtEntries, this.keepParameterNames, this.obfuscateNames);
 		}
 	}
 }

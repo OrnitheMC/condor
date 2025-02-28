@@ -46,7 +46,7 @@ public class Condor {
 					localVariableNamer.init(options, mtd);
 					localVariableNamer.run(generateLvt);
 
-					if (generateLvt) {
+					if (generateLvt || options.obfuscateNames) {
 						// mark the class for saving
 						cls.markDirty();
 					}

@@ -10,7 +10,7 @@ public class Main {
 	public static void main(String... args) throws Exception {
 		if (args.length < 1) {
 			System.out.println("Expected at least 1 argument, got " + args.length);
-			System.out.println("Usage: <jar> [<lib>...] [--remove-invalid-entries] [--keep-parameter-names]");
+			System.out.println("Usage: <jar> [<lib>...] [--remove-invalid-entries] [--keep-parameter-names] [--obfuscate-names]");
 
 			System.exit(1);
 		}
@@ -31,6 +31,9 @@ public class Main {
 					break;
 				case "keep-parameter-names":
 					options.keepParameterNames();
+					break;
+				case "obfuscate-names":
+					options.obfuscateNames();
 					break;
 				default:
 					throw new IllegalArgumentException("unknown option " + option);
