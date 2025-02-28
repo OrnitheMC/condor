@@ -42,11 +42,15 @@ public class Condor {
 						}
 					}
 
-					// generate local variable names
-					localVariableNamer.init(options, mtd);
-					localVariableNamer.run(generateLvt);
+					boolean nameVariables = (mtd.localVariables != null);
 
-					if (generateLvt || options.obfuscateNames) {
+					if (nameVariables) {
+						// generate local variable names
+						localVariableNamer.init(options, mtd);
+						localVariableNamer.run(generateLvt);
+					}
+
+					if (generateLvt || (nameVariables && options.obfuscateNames)) {
 						// mark the class for saving
 						cls.markDirty();
 					}
