@@ -1,4 +1,4 @@
-package net.ornithemc.condor;
+package net.ornithemc.condor.lvt;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -7,6 +7,8 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.MethodNode;
+
+import net.ornithemc.condor.Options;
 
 public class LocalVariableNamer {
 

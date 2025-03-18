@@ -10,7 +10,7 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.tree.ClassNode;
 
-import net.ornithemc.condor.ASM;
+import net.ornithemc.condor.util.ASM;
 
 public class ClassSource {
 

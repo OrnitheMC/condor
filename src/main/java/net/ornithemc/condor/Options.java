@@ -6,7 +6,7 @@ public class Options {
 	public final boolean keepParameterNames;
 	public final boolean obfuscateNames;
 
-	private Options(boolean removeInvalidEntries, boolean keepParameterNames, boolean obfuscateNames) {
+	Options(boolean removeInvalidEntries, boolean keepParameterNames, boolean obfuscateNames) {
 		this.removeInvalidEntries = removeInvalidEntries;
 		this.keepParameterNames = keepParameterNames;
 		this.obfuscateNames = obfuscateNames;

@@ -8,6 +8,9 @@ import java.util.List;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
+import net.ornithemc.condor.lvt.LocalVariableNamer;
+import net.ornithemc.condor.lvt.LocalVariableTableGenerator;
+import net.ornithemc.condor.lvt.LocalVariableTables;
 import net.ornithemc.condor.representation.ClassInstance;
 import net.ornithemc.condor.representation.Classpath;
 
@@ -21,9 +24,11 @@ public class Condor {
 		Classpath classpath = new Classpath(jar, libs);
 
 		try {
-			// open file systems parse main jar
+			// open file systems and parse main jar
 			classpath.open();
 
+			// create a local variable table generator that can be reused
+			LocalVariableTableGenerator localVariableTableGenerator = new LocalVariableTableGenerator();
 			// create a local variable namer that can be reused
 			LocalVariableNamer localVariableNamer = new LocalVariableNamer();
 
@@ -35,7 +40,8 @@ public class Condor {
 					boolean generateLvt = !LocalVariableTables.isComplete(mtd);
 
 					if (generateLvt) {
-						LocalVariableTables.generate(classpath, node, mtd);
+						localVariableTableGenerator.init(classpath, node, mtd);
+						localVariableTableGenerator.run();
 
 						if (options.removeInvalidEntries) {
 							LocalVariableTables.removeInvalidEntries(node, mtd);

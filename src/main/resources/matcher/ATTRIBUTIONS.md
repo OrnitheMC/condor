@@ -1,0 +1,1 @@
+Some of the code in the `net.ornithemc.condor.lvt` package is based on code from [FabricMC](https://fabricmc.net/)'s [Matcher](https://github.com/FabricMC/Matcher) project. The license for the project can be found in `FABRIC_MATCHER_LICENSE.md`.

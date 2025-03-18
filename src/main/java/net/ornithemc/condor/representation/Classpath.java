@@ -6,6 +6,8 @@ import java.util.List;
 
 import org.objectweb.asm.Type;
 
+import net.ornithemc.condor.util.ASM;
+
 public class Classpath {
 
 	private final ClassSource jre;
@@ -77,6 +79,10 @@ public class Classpath {
 		return this.object;
 	}
 
+	public Type getCommonSuperClass(Type type1, Type type2) {
+		return this.getCommonSuperClass(this.getClass(type1), this.getClass(type2)).getType();
+	}
+
 	public ClassInstance getCommonSuperClass(ClassInstance cls1, ClassInstance cls2) {
 		if (cls1.hasSuperClass(this, cls2)) {
 			return cls2;
@@ -94,5 +100,68 @@ public class Classpath {
 		} while (!cls2.hasSuperClass(this, cls1));
 
 		return cls1;
+	}
+
+	public Type getCommonSuperType(Type type1, Type type2) {
+		if (type1 == type2 || type1.equals(type2)) {
+			return type1;
+		}
+		if (type1 == ASM.NULL_TYPE) {
+			return type2;
+		}
+		if (type2 == ASM.NULL_TYPE) {
+			return type1;
+		}
+		if (type1.getSort() < Type.ARRAY || type2.getSort() < Type.ARRAY) {
+			if (type1.getSort() >= Type.BOOLEAN && type1.getSort() <= Type.INT && type2.getSort() >= Type.BOOLEAN && type2.getSort() <= Type.INT) {
+				return ASM.getIntType(type1, type2);
+			}
+			// incompatible primitive types
+			return null;
+		}
+		if (type1.getSort() == Type.ARRAY && type2.getSort() == Type.ARRAY) {
+			int dims1 = type1.getDimensions();
+			Type elem1 = type1.getElementType();
+			int dims2 = type2.getDimensions();
+			Type elem2 = type2.getElementType();
+
+			if (dims1 == dims2) {
+				Type commonSuperType;
+
+				if (elem1.equals(elem2)) {
+					commonSuperType = elem1;
+				} else if (elem1.getSort() == Type.OBJECT && elem2.getSort() == Type.OBJECT) {
+					commonSuperType = this.getCommonSuperClass(elem1, elem2);
+				} else {
+					return ASM.getArrayType(ASM.OBJECT_TYPE, dims1 - 1);
+				}
+
+				return ASM.getArrayType(commonSuperType, dims1);
+			} else {
+				int shared;
+				Type smaller;
+
+				if (dims1 < dims2) {
+					smaller = elem1;
+					shared = dims1 - 1;
+				} else {
+					smaller = elem2;
+					shared = dims2 - 1;
+				}
+				if (smaller.getSort() == Type.OBJECT) {
+					shared++;
+				}
+
+				return ASM.getArrayType(ASM.OBJECT_TYPE, shared);
+			}
+		}
+		if (type1.getSort() == Type.OBJECT && type2.getSort() == Type.OBJECT) {
+			return this.getCommonSuperClass(type1, type2);
+		}
+		if ((type1.getSort() == Type.ARRAY && type2.getSort() == Type.OBJECT) || (type1.getSort() == Type.OBJECT && type2.getSort() == Type.ARRAY)) {
+			return ASM.OBJECT_TYPE;
+		}
+
+		throw new IllegalArgumentException("given illegal type(s) " + type1 + " and " + type2);
 	}
 }
