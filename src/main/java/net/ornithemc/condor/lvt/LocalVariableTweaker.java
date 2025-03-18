@@ -589,15 +589,24 @@ public class LocalVariableTweaker implements Opcodes {
 				AbstractInsnNode insn = this.insns.get(insnIndex);
 
 				if (insn.getOpcode() == ISTORE) {
-					StackFrame nextFrame = this.frames.frames[insnIndex + 1];
 					int varIndex = ((VarInsnNode) insn).var;
-					Type localType = nextFrame.getLocal(varIndex);
+					BitSet processed = this.processed[varIndex];
 
-					if (localType != Type.BOOLEAN_TYPE && this.checkBooleanExpression(insnIndex)) {
-						this.tweakLocals(insnIndex + 1, varIndex, localType, Type.BOOLEAN_TYPE);
+					// if this varIndex at this insn has already been processed, it
+					// either already is a boolean, or its type has been restricted
+					// to another int related type
+					if (!processed.get(insnIndex + 1)) {
+						StackFrame nextFrame = this.frames.frames[insnIndex + 1];
+						Type localType = nextFrame.getLocal(varIndex);
 
-						if (nextFrame.getLocal(varIndex) == Type.BOOLEAN_TYPE) {
-							processLocals = true;
+						if (localType != null && localType != Type.BOOLEAN_TYPE) {
+							if (this.checkBooleanExpression(insnIndex)) {
+								this.tweakLocals(insnIndex + 1, varIndex, localType, Type.BOOLEAN_TYPE);
+
+								if (processed.get(insnIndex + 1)) {
+									processLocals = true;
+								}
+							}
 						}
 					}
 				}
