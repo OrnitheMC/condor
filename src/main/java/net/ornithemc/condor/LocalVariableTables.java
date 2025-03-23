@@ -60,13 +60,11 @@ public class LocalVariableTables {
 		int maxLocals = 0;
 
 		for (LocalVariableNode localVariable : method.localVariables) {
-			if (localVariable.index > maxLocals) {
-				int varIndex = localVariable.index;
-				Type type = Type.getType(localVariable.desc);
+			int varIndex = localVariable.index;
+			Type type = Type.getType(localVariable.desc);
 
-				if (maxLocals < varIndex + type.getSize()) {
-					maxLocals = varIndex + type.getSize();
-				}
+			if (maxLocals < varIndex + type.getSize()) {
+				maxLocals = varIndex + type.getSize();
 			}
 		}
 
