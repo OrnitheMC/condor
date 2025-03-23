@@ -24,12 +24,12 @@ public class LocalVariableTables {
 		if (method.localVariables == null || method.localVariables.isEmpty()) {
 			return false;
 		}
-		// if lvt size is less than maxLocals, some locals are stripped
-		if (method.localVariables.size() < method.maxLocals) {
-			return false;
-		}
 		// non-static methods should have a 'this' variable at index 0
 		if ((method.access & Opcodes.ACC_STATIC) == 0 && !hasThisVariable(method)) {
+			return false;
+		}
+		// check that var indices up to maxLocals are used
+		if (!hasMaxLocals(method)) {
 			return false;
 		}
 
@@ -44,6 +44,23 @@ public class LocalVariableTables {
 		}
 
 		return false;
+	}
+
+	private static boolean hasMaxLocals(MethodNode method) {
+		int maxLocals = 0;
+
+		for (LocalVariableNode localVariable : method.localVariables) {
+			if (localVariable.index > maxLocals) {
+				int varIndex = localVariable.index;
+				Type type = Type.getType(localVariable.desc);
+
+				if (maxLocals < varIndex + type.getSize()) {
+					maxLocals = varIndex + type.getSize();
+				}
+			}
+		}
+
+		return maxLocals == method.maxLocals;
 	}
 
 	public static void removeInvalidEntries(ClassNode cls, MethodNode method) {
