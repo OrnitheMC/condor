@@ -7,6 +7,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.ParameterNode;
 
 public class LocalVariableNamer {
 
@@ -46,40 +47,54 @@ public class LocalVariableNamer {
 	}
 
 	public void run(boolean improveNames) {
-		Type methodType = Type.getType(this.method.desc);
-		Type[] methodArgs = methodType.getArgumentTypes();
-
 		boolean isStatic = (this.method.access & Opcodes.ACC_STATIC) != 0;
 
+		Type methodType = Type.getType(this.method.desc);
+		Type[] parameterTypes = methodType.getArgumentTypes();
+
+		// the parameter node corresponding to each local variable
+		ParameterNode[] parameters = new ParameterNode[this.method.localVariables.size()];
+
+		if (this.method.parameters != null) {
+			int expectedIndex = 0;
+
+			// offset the var index to account for the 'this' var in non-static methods
+			if (!isStatic) {
+				expectedIndex++;
+			}
+
+			for (int i = 0; i < parameterTypes.length; i++) {
+				ParameterNode parameter = this.method.parameters.get(i);
+
+				for (int j = 0; j < this.method.localVariables.size(); j++) {
+					LocalVariableNode localVariable = this.method.localVariables.get(j);
+
+					if (localVariable.index == expectedIndex) {
+						parameters[j] = parameter;
+						break;
+					}
+				}
+
+				expectedIndex += parameterTypes[i].getSize();
+			}
+		}
+
+		boolean hasParams = (this.method.parameters != null);
+		boolean takeArgNames = improveNames && hasParams && this.options.keepParameterNames;
+
 		// name all local variables
-		for (LocalVariableNode localVariable : this.method.localVariables) {
+		for (int i = 0; i < this.method.localVariables.size(); i++) {
+			LocalVariableNode localVariable = this.method.localVariables.get(i);
+			ParameterNode parameter = parameters[i];
+
 			String name = null;
 
 			if (!isStatic && localVariable.index == 0) {
 				name = "this";
 			} else if (this.options.obfuscateNames) {
 				name = "\u2603"; // snowman character
-			} else if (improveNames && this.options.keepParameterNames && this.method.parameters != null) {
-				int varsSize = localVariable.index;
-
-				// offset the var index to account for the 'this' var in non-static methods
-				if (!isStatic) {
-					varsSize--;
-				}
-
-				for (int j = 0; j < methodArgs.length; j++) {
-					if (varsSize == 0) {
-						// this variable is a parameter
-						if (name == null) {
-							// take name from parameter attribute
-							name = this.method.parameters.get(j).name;
-						}
-
-						break;
-					} else {
-						varsSize -= methodArgs[j].getSize();
-					}
-				}
+			} else if (takeArgNames && parameter != null) {
+				name = parameter.name;
 			}
 
 			// if no name picked yet, generate one based on the variable types
@@ -90,6 +105,7 @@ public class LocalVariableNamer {
 				name = this.generateName(varType);
 			}
 
+			// assign new name and keep track of duplicates
 			if (name != null) {
 				localVariable.name = name;
 
@@ -103,9 +119,24 @@ public class LocalVariableNamer {
 		if (improveNames && !this.options.obfuscateNames && !this.duplicates.isEmpty()) {
 			for (int i = 0; i < this.method.localVariables.size(); i++) {
 				LocalVariableNode localVariable = this.method.localVariables.get(i);
+				ParameterNode parameter = parameters[i];
 
-				if (this.duplicates.contains(localVariable.name)) {
+				if (this.options.keepParameterNames && parameter != null) {
+					localVariable.name = parameter.name;
+				} else if (this.duplicates.contains(localVariable.name)) {
 					localVariable.name += i;
+				}
+			}
+		}
+
+		// ensure parameter attributes match the new names
+		if (this.method.parameters != null) {
+			for (int i = 0; i < this.method.localVariables.size(); i++) {
+				LocalVariableNode localVariable = this.method.localVariables.get(i);
+				ParameterNode parameter = parameters[i];
+
+				if (parameter != null) {
+					parameter.name = localVariable.name;
 				}
 			}
 		}
