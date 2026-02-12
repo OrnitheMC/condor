@@ -102,7 +102,7 @@ public class LocalVariableTweaker implements Opcodes {
 				case CASTORE:
 				case SASTORE:
 					{
-						int offset = 2;
+						int offset = 3;
 						if (opcode == LASTORE || opcode == DASTORE) {
 							offset++;
 						}
