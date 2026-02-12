@@ -116,6 +116,15 @@ public class LocalVariableTweaker implements Opcodes {
 					}
 
 					break;
+				case L2I:
+				case F2I:
+				case D2I:
+					{
+						this.processLocalsAfterInsn(insnIndex, Type.INT_TYPE);
+					}
+
+					break;
+
 				case I2B:
 					{
 						this.processLocalsBeforeInsn(insnIndex, 0, Type.INT_TYPE);
