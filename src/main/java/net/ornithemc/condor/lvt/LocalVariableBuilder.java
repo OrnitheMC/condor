@@ -70,6 +70,7 @@ public class LocalVariableBuilder {
 			boolean exit = false;
 
 			for (; !exit; insnIndex++) {
+				AbstractInsnNode insn = this.insns.get(insnIndex);
 				StackFrame frame = this.frames.frames[insnIndex];
 
 				for (int varIndex = 0; varIndex < this.method.maxLocals; varIndex++) {
@@ -104,12 +105,17 @@ public class LocalVariableBuilder {
 						varIndexToLvtIndex[varIndex] = lvtIndex;
 						lvtIndexToVarIndex[lvtIndex] = varIndex;
 						lvtIndexToStartInsnIndex[lvtIndex] = insnIndex;
+						lvtIndexToEndInsnIndex[lvtIndex] = insnIndex;
 
 						existence[lvtIndex] = new BitSet(this.insns.size());
 					}
 
 					// update end index and existence
-					lvtIndexToEndInsnIndex[lvtIndex] = insnIndex;
+					if (insnIndex == this.insns.size() - 1 || insn.getType() == AbstractInsnNode.LABEL) {
+						// only update end insn on label insns
+						// to avoid overlap with another local
+						lvtIndexToEndInsnIndex[lvtIndex] = insnIndex;
+					}
 					existence[lvtIndex].set(insnIndex);
 				}
 
