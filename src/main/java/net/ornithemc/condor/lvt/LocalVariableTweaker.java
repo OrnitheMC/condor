@@ -225,7 +225,7 @@ public class LocalVariableTweaker implements Opcodes {
 		}
 
 		// second pass: process insns that restrict what type(s) locals
-		// can have, like arithmetic and logic ops
+		// can have, like constants, and arithmetic and logic ops
 		for (int insnIndex = 0; insnIndex < this.insns.size(); insnIndex++) {
 			AbstractInsnNode insn = this.insns.get(insnIndex);
 			StackFrame frame = this.frames.frames[insnIndex];
@@ -234,6 +234,13 @@ public class LocalVariableTweaker implements Opcodes {
 				int opcode = insn.getOpcode();
 
 				switch (opcode) {
+				case BIPUSH:
+				case SIPUSH:
+					{
+						this.processLocalsAfterInsn(insnIndex, Type.INT_TYPE);
+					}
+
+					break;
 				case IADD:
 				case ISUB:
 				case IMUL:
