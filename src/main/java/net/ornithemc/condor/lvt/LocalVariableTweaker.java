@@ -68,11 +68,54 @@ public class LocalVariableTweaker implements Opcodes {
 		// a certain type, like field, method, and return insns
 		for (int insnIndex = 0; insnIndex < this.insns.size(); insnIndex++) {
 			AbstractInsnNode insn = this.insns.get(insnIndex);
+			StackFrame frame = this.frames.frames[insnIndex];
 
 			if (!ASM.isPseudoInsn(insn)) {
 				int opcode = insn.getOpcode();
 
 				switch (opcode) {
+				case SALOAD:
+				case CALOAD:
+				case BALOAD:
+				case IALOAD:
+				case LALOAD:
+				case FALOAD:
+				case DALOAD:
+				case AALOAD:
+					{
+						Type arrayType = frame.peek2();
+
+						Type value = (opcode == AALOAD)
+							? Type.getType(arrayType.getDescriptor().substring(1))
+							: arrayType.getElementType();
+
+						this.processLocalsAfterInsn(insnIndex, value);
+					}
+
+					break;
+				case IASTORE:
+				case LASTORE:
+				case FASTORE:
+				case DASTORE:
+				case AASTORE:
+				case BASTORE:
+				case CASTORE:
+				case SASTORE:
+					{
+						int offset = 2;
+						if (opcode == LASTORE || opcode == DASTORE) {
+							offset++;
+						}
+						Type arrayType = frame.peek(offset);
+
+						Type value = (opcode == AASTORE)
+							? Type.getType(arrayType.getDescriptor().substring(1))
+							: arrayType.getElementType();
+
+						this.processLocalsBeforeInsn(insnIndex, 0, value);
+					}
+
+					break;
 				case I2B:
 					{
 						this.processLocalsBeforeInsn(insnIndex, 0, Type.INT_TYPE);
