@@ -84,7 +84,7 @@ public class LocalVariableBuilder {
 
 					int lvtIndex = varIndexToLvtIndex[varIndex];
 
-					if (lvtIndex < 0 || !type.equals(this.frames.frames[lvtIndexToStartInsnIndex[lvtIndex]].getLocal(varIndex))) {
+					if (lvtIndex < 0 || !type.equals(lvtTypes[lvtIndex])) {
 						// no var exists yet or existing var is different type: create new lvt entry
 
 						lvtIndex = varCount++;
@@ -282,13 +282,14 @@ public class LocalVariableBuilder {
 
 			int lvtIndex = nextLvtIndex;
 
+			Type type = lvtTypes[lvtIndex];
 			int startInsnIndex = lvtIndexToStartInsnIndex[lvtIndex];
 			int endInsnIndex = lvtIndexToEndInsnIndex[lvtIndex];
 
 			int varIndex = lvtIndexToVarIndex[lvtIndex];
 			LabelNode startLabel = this.getStartLabel(startInsnIndex);
 			LabelNode endLabel = this.getEndLabel(endInsnIndex);
-			String desc = this.frames.frames[startInsnIndex].getLocal(varIndex).getDescriptor();
+			String desc = type.getDescriptor();
 			String name = "var" + this.method.localVariables.size();
 
 			this.method.localVariables.add(new LocalVariableNode(name, desc, null, startLabel, endLabel, varIndex));
