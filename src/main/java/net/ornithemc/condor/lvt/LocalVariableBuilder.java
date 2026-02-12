@@ -13,6 +13,7 @@ import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.MethodNode;
 
 import net.ornithemc.condor.representation.Classpath;
+import net.ornithemc.condor.util.ASM;
 
 public class LocalVariableBuilder {
 
@@ -40,6 +41,8 @@ public class LocalVariableBuilder {
 	public void build() {
 		// TODO: use FrameBuilder's liveness instead of computing 'exists' here
 		//       or maybe not? since they are not quite the same thing
+
+		Type[] lvtTypes = new Type[this.method.maxLocals];
 
 		int[] lvtIndexToVarIndex = new int[this.method.maxLocals];
 		int[] lvtIndexToStartInsnIndex = new int[this.method.maxLocals];
@@ -84,7 +87,11 @@ public class LocalVariableBuilder {
 					if (lvtIndex < 0 || !type.equals(this.frames.frames[lvtIndexToStartInsnIndex[lvtIndex]].getLocal(varIndex))) {
 						// no var exists yet or existing var is different type: create new lvt entry
 
-						if (varCount >= lvtIndexToVarIndex.length) {
+						lvtIndex = varCount++;
+
+						if (varCount > lvtIndexToVarIndex.length) {
+							lvtTypes = Arrays.copyOf(lvtTypes, lvtTypes.length * 2);
+
 							lvtIndexToVarIndex = Arrays.copyOf(lvtIndexToVarIndex, lvtIndexToVarIndex.length * 2);
 							lvtIndexToStartInsnIndex = Arrays.copyOf(lvtIndexToStartInsnIndex, lvtIndexToStartInsnIndex.length * 2);
 							lvtIndexToEndInsnIndex = Arrays.copyOf(lvtIndexToEndInsnIndex, lvtIndexToEndInsnIndex.length * 2);
@@ -92,7 +99,8 @@ public class LocalVariableBuilder {
 							existence = Arrays.copyOf(existence, existence.length * 2);
 						}
 
-						lvtIndex = varCount++;
+						lvtTypes[lvtIndex] = type;
+
 						varIndexToLvtIndex[varIndex] = lvtIndex;
 						lvtIndexToVarIndex[lvtIndex] = varIndex;
 						lvtIndexToStartInsnIndex[lvtIndex] = insnIndex;
@@ -125,10 +133,10 @@ public class LocalVariableBuilder {
 				boolean existed = false;
 				boolean exists = false;
 
+				Type type = lvtTypes[lvtIndex];
 				int varIndex = lvtIndexToVarIndex[lvtIndex];
 				int fromInsnIndex = lvtIndexToStartInsnIndex[lvtIndex];
 				int toInsnIndex = lvtIndexToEndInsnIndex[lvtIndex];
-				Type type = this.frames.frames[fromInsnIndex].getLocal(varIndex);
 
 				// bitset to be re-used
 				BitSet insnsToCheck = new BitSet(this.insns.size());
@@ -184,11 +192,10 @@ public class LocalVariableBuilder {
 							}
 
 							// check if adjacent entry has matching varIndex and type
+							Type adjType = lvtTypes[adjLvtIndex];
 							int adjVarIndex = lvtIndexToVarIndex[adjLvtIndex];
-							int adjInsnIndex = lvtIndexToStartInsnIndex[adjLvtIndex];
-							Type adjType = this.frames.frames[adjInsnIndex].getLocal(adjVarIndex);
 
-							if (adjVarIndex == varIndex && adjType.equals(type)) {
+							if (adjVarIndex == varIndex && canMergeLocals(adjType, type)) {
 								matchingLvtIndex = adjLvtIndex;
 							}
 						}
@@ -210,6 +217,9 @@ public class LocalVariableBuilder {
 							lvtIndexToMerge = lvtIndex;
 						}
 
+						// merge local types
+						lvtTypes[lvtIndexToMergeInto] = mergeLocals(lvtTypes[lvtIndexToMergeInto], lvtTypes[lvtIndexToMerge]);
+
 						// merge start and end indices
 						lvtIndexToStartInsnIndex[lvtIndexToMergeInto] = Math.min(lvtIndexToStartInsnIndex[lvtIndexToMergeInto], lvtIndexToStartInsnIndex[lvtIndexToMerge]);
 						lvtIndexToEndInsnIndex[lvtIndexToMergeInto] = Math.max(lvtIndexToEndInsnIndex[lvtIndexToMergeInto], lvtIndexToEndInsnIndex[lvtIndexToMerge]);
@@ -218,6 +228,8 @@ public class LocalVariableBuilder {
 						existence[lvtIndexToMergeInto].or(existence[lvtIndexToMerge]);
 
 						//  and remove the merged lvt entry from the arrays
+						System.arraycopy(lvtTypes, lvtIndexToMerge + 1, lvtTypes, lvtIndexToMerge, lvtTypes.length - (lvtIndexToMerge + 1));
+
 						System.arraycopy(lvtIndexToVarIndex, lvtIndexToMerge + 1, lvtIndexToVarIndex, lvtIndexToMerge, lvtIndexToVarIndex.length - (lvtIndexToMerge + 1));
 						System.arraycopy(lvtIndexToStartInsnIndex, lvtIndexToMerge + 1, lvtIndexToStartInsnIndex, lvtIndexToMerge, lvtIndexToStartInsnIndex.length - (lvtIndexToMerge + 1));
 						System.arraycopy(lvtIndexToEndInsnIndex, lvtIndexToMerge + 1, lvtIndexToEndInsnIndex, lvtIndexToMerge, lvtIndexToEndInsnIndex.length - (lvtIndexToMerge + 1));
@@ -284,6 +296,28 @@ public class LocalVariableBuilder {
 			// make sure this lvt entry will not be added multiple times
 			lvtIndexToVarIndex[lvtIndex] = Integer.MAX_VALUE;
 		}
+	}
+
+	private boolean canMergeLocals(Type type1, Type type2) {
+		if (type1 == ASM.NULL_TYPE) {
+			return type2.getSort() == Type.OBJECT || type2.getSort() == Type.ARRAY;
+		}
+		if (type2 == ASM.NULL_TYPE) {
+			return type1.getSort() == Type.OBJECT || type1.getSort() == Type.ARRAY;
+		}
+
+		return type1.equals(type2);
+	}
+
+	private Type mergeLocals(Type type1, Type type2) {
+		if (type1 == ASM.NULL_TYPE) {
+			return type2;
+		}
+		if (type2 == ASM.NULL_TYPE) {
+			return type1;
+		}
+
+		return type1;
 	}
 
 	private LabelNode getStartLabel(int insnIndex) {

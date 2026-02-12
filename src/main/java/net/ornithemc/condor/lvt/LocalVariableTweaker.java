@@ -765,11 +765,6 @@ public class LocalVariableTweaker implements Opcodes {
 			}
 		}
 
-		// sometimes you get an unused null local
-		if (localTypes.isEmpty()) {
-			localTypes.add(ASM.OBJECT_TYPE);
-		}
-
 		// assign null type to ensure it is updated
 		Type commonLocalType = ASM.NULL_TYPE;
 		Type tweakedType = ASM.NULL_TYPE;
