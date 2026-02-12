@@ -286,6 +286,10 @@ public class LocalVariableBuilder {
 			int startInsnIndex = lvtIndexToStartInsnIndex[lvtIndex];
 			int endInsnIndex = lvtIndexToEndInsnIndex[lvtIndex];
 
+			if (type == ASM.NULL_TYPE) {
+				type = ASM.OBJECT_TYPE;
+			}
+
 			int varIndex = lvtIndexToVarIndex[lvtIndex];
 			LabelNode startLabel = this.getStartLabel(startInsnIndex);
 			LabelNode endLabel = this.getEndLabel(endInsnIndex);
