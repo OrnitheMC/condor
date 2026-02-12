@@ -243,8 +243,17 @@ public class LocalVariableTweaker implements Opcodes {
 				int opcode = insn.getOpcode();
 
 				switch (opcode) {
+				case ICONST_M1:
+				//case ICONST_0:
+				//case ICONST_1:
+				case ICONST_2:
+				case ICONST_3:
+				case ICONST_4:
+				case ICONST_5:
 				case BIPUSH:
 				case SIPUSH:
+					// constants 0 and 1 are used as false/true
+					// use of other constants mean it's not a boolean expression
 					{
 						this.processLocalsAfterInsn(insnIndex, Type.INT_TYPE);
 					}
@@ -308,10 +317,40 @@ public class LocalVariableTweaker implements Opcodes {
 					}
 
 					break;
+				case IFLT:
+				case IFGE:
+				case IFGT:
+				case IFLE:
+					// equals checks may be used for boolean expressions
+					// less than/greater than checks only for int types
+					{
+						Type value = this.updateOperandType(frame.peek(), Type.INT_TYPE);
+
+						this.processLocalsBeforeInsn(insnIndex, 0, value);
+					}
+
+					break;
 				case IFNULL:
 				case IFNONNULL:
 					{
 						this.processLocalsBeforeInsn(insnIndex, 0, frame.peek());
+					}
+
+					break;
+				case IF_ICMPLT:
+				case IF_ICMPGE:
+				case IF_ICMPGT:
+				case IF_ICMPLE:
+				case IF_ACMPEQ:
+				case IF_ACMPNE:
+					// equals checks may be used for boolean expressions
+					// less than/greater than checks only for int types
+					{
+						Type value2 = this.updateOperandType(frame.peek(), Type.INT_TYPE);
+						Type value1 = this.updateOperandType(frame.peek2(), Type.INT_TYPE);
+
+						this.processLocalsBeforeInsn(insnIndex, 0, value2);
+						this.processLocalsBeforeInsn(insnIndex, 1, value1);
 					}
 
 					break;
