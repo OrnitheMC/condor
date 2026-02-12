@@ -349,6 +349,8 @@ public class LocalVariableTweaker implements Opcodes {
 							if (tweaked1 == Type.BOOLEAN_TYPE) {
 								this.resetLocalsBeforeInsn(insnIndex, 1, value1, tweaked1);
 							}
+
+							this.processLocalsAfterInsn(insnIndex, Type.INT_TYPE);
 						}
 					}
 
