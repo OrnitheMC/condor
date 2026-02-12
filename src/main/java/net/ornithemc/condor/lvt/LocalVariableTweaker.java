@@ -312,7 +312,7 @@ public class LocalVariableTweaker implements Opcodes {
 						this.collectStoredLocals(storeInsns, insnIndex, varIndex, localType, value);
 
 						if (!storeInsns.isEmpty()) {
-							this.tweakLocals(storeInsns, value);
+							this.tweakLocals(storeInsns, varIndex, value);
 						}
 					}
 
@@ -456,7 +456,7 @@ public class LocalVariableTweaker implements Opcodes {
 			return stackType;
 		}
 
-		return this.tweakLocals(storeInsns, expectedType);
+		return this.tweakLocals(storeInsns, varIndex, expectedType);
 	}
 
 	private void resetLocalsBeforeInsn(int insnIndex, int stackOffset, Type originalType, Type tweakedType) {
@@ -804,7 +804,11 @@ public class LocalVariableTweaker implements Opcodes {
 		return false;
 	}
 
-	private Type tweakLocals(BitSet storeInsns, Type expectedType) {
+	private Type tweakLocals(BitSet storeInsns, int varIndex, Type expectedType) {
+		// check that none of these insns were processed before
+		// otherwise take the previously processed type into account
+		BitSet processed = this.processed[varIndex];
+
 		// collect unique local types
 		Set<Type> localTypes = new HashSet<>();
 
@@ -818,6 +822,10 @@ public class LocalVariableTweaker implements Opcodes {
 			Type storedLocalType = nextFrame.getLocal(storedVarIndex);
 
 			if (storedLocalType != ASM.NULL_TYPE) {
+				if (processed.get(storeInsnIndex + 1)) {
+					expectedType = this.classpath.getCommonSuperType(expectedType, storedLocalType);
+				}
+
 				localTypes.add(storedLocalType);
 			}
 		}
@@ -849,16 +857,16 @@ public class LocalVariableTweaker implements Opcodes {
 			Type storedLocalType = nextFrame.getLocal(storedVarIndex);
 
 			// the local is not in the frame until after the store insn!
-			this.tweakLocals(storeInsnIndex + 1, storedVarIndex, storedLocalType, tweakedType);
+			Type tweakedLocalType = this.tweakLocals(storeInsnIndex + 1, storedVarIndex, storedLocalType, tweakedType);
 
-			resultType = this.classpath.getCommonSuperType(resultType, nextFrame.getLocal(storedVarIndex));
+			resultType = this.classpath.getCommonSuperType(resultType, tweakedLocalType);
 		}
 
 		return resultType;
 	}
 
 	// TODO: tweak stack too?
-	private void tweakLocals(int startInsn, int varIndex, Type expectedLocalType, Type tweakedType) {
+	private Type tweakLocals(int startInsn, int varIndex, Type expectedLocalType, Type tweakedType) {
 		BitSet processed = this.processed[varIndex];
 
 		for (int insnIndex = startInsn; insnIndex < this.insns.size(); insnIndex++) {
@@ -898,6 +906,8 @@ public class LocalVariableTweaker implements Opcodes {
 				break;
 			}
 		}
+
+		return tweakedType;
 	}
 
 	/**
