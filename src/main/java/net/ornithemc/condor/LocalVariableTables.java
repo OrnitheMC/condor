@@ -91,7 +91,7 @@ public class LocalVariableTables {
 		try {
 			analyzer.analyze(classNode.name, method);
 		} catch (AnalyzerException ex) {
-			ex.printStackTrace();
+//			ex.printStackTrace();
 		}
 
 		// Get frames from the Analyzer
